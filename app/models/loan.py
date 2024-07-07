@@ -15,5 +15,16 @@ class Loan(db.Model):
             self.overdue = True
         return self.overdue
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'book_id': self.book_id,
+            'borrowed_date': self.borrowed_date.isoformat(),
+            'due_date': self.due_date.isoformat() if self.due_date else None,
+            'returned_date': self.returned_date.isoformat() if self.returned_date else None,
+            'overdue': self.overdue
+        }
+        
     def __repr__(self):
         return f'<Loan {self.id}>'
