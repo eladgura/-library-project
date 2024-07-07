@@ -1,10 +1,11 @@
+# File: app/__init__.py
+
 import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from app.config import Config
 from flask_jwt_extended import JWTManager
-##from . import auth, books, loans, users
 
 # Initialize SQLAlchemy
 db = SQLAlchemy()
@@ -15,8 +16,7 @@ def create_app():
     
     db.init_app(app)
     Migrate(app, db)
-    
-    jwt = JWTManager(app)
+    jwt = JWTManager(app)  # Initialize JWTManager here
     
     with app.app_context():
         from app.models import User, Book, Loan  # Import models

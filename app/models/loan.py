@@ -11,11 +11,23 @@ class Loan(db.Model):
     overdue = db.Column(db.Boolean, default=False)
 
     def check_overdue(self):
+        """Check if the loan is overdue."""
         if self.returned_date is None and datetime.utcnow() > self.due_date:
             self.overdue = True
+        else:
+            self.overdue = False
         return self.overdue
 
+    @staticmethod
+    def update_all_overdue_status():
+        """Update the overdue status for all loans."""
+        loans = Loan.query.all()
+        for loan in loans:
+            loan.check_overdue()
+        db.session.commit()
+
     def to_dict(self):
+        """Return a dictionary representation of the loan."""
         return {
             'id': self.id,
             'user_id': self.user_id,
@@ -25,6 +37,6 @@ class Loan(db.Model):
             'returned_date': self.returned_date.isoformat() if self.returned_date else None,
             'overdue': self.overdue
         }
-        
+
     def __repr__(self):
         return f'<Loan {self.id}>'

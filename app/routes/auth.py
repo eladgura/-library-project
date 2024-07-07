@@ -1,10 +1,9 @@
-# app/routes/auth.py
-
 from flask import Blueprint, request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from app import db
 from app.models.user import User
+from app.models.loan import Loan
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -35,6 +34,20 @@ def login():
 
     if user and check_password_hash(user.password, password):
         access_token = create_access_token(identity={'username': user.username, 'is_admin': user.is_admin})
-        return jsonify(access_token=access_token), 200
+        
+        # Update overdue status for all loans of the user
+        loans = Loan.query.filter_by(user_id=user.id).all()
+        overdue_loans = []
+        for loan in loans:
+            if loan.check_overdue():
+                overdue_loans.append(loan)
+
+        db.session.commit()
+
+        overdue_message = ""
+        if overdue_loans:
+            overdue_message = "You have overdue books that need to be returned."
+        
+        return jsonify(access_token=access_token, message=overdue_message), 200
 
     return jsonify({"message": "Invalid credentials"}), 401

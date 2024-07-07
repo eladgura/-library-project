@@ -1,9 +1,9 @@
-# File: app/routes/books.py
-
 import secrets
 from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db
 from app.models.book import Book
+from app.models.user import User
 
 # Define the Blueprint for books
 books_bp = Blueprint('books', __name__)
@@ -20,8 +20,8 @@ def get_book(id):
     book = Book.query.get_or_404(id)
     return jsonify(book.to_dict())
 
-
 @books_bp.route('/books', methods=['POST'])
+@jwt_required()
 def add_book():
     data = request.get_json()
     new_book = Book(
@@ -37,6 +37,7 @@ def add_book():
 
 # PUT update an existing book by ID
 @books_bp.route('/books/<int:id>', methods=['PUT'])
+@jwt_required()
 def update_book(id):
     book = Book.query.get_or_404(id)
     data = request.get_json()
@@ -49,10 +50,32 @@ def update_book(id):
     db.session.commit()
     return jsonify(book.to_dict())
 
-# DELETE a book by ID
+# DELETE a book by ID (only admins can delete)
 @books_bp.route('/books/<int:id>', methods=['DELETE'])
+@jwt_required()
 def delete_book(id):
     book = Book.query.get_or_404(id)
-    db.session.delete(book)
+    current_user = get_jwt_identity()
+    user = User.query.filter_by(username=current_user['username']).first()
+
+    if not user.is_admin:
+        return jsonify({"message": "Admin privileges required"}), 403
+
+    book.in_stock = 0
     db.session.commit()
     return '', 204
+
+@books_bp.route('/books/<int:book_id>', methods=['DELETE'])
+@jwt_required()
+def delete_book(book_id):
+    current_user = get_jwt_identity()
+    user = User.query.filter_by(username=current_user['username']).first()
+
+    if not user.is_admin:
+        return jsonify({"message": "Admin access required"}), 403
+
+    book = Book.query.get_or_404(book_id)
+    book.in_stock = 0  # Mark as out of stock
+    db.session.commit()
+    
+    return jsonify({"message": "Book marked as out of stock"}), 200
